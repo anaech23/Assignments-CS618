@@ -1,22 +1,30 @@
-import { PostList } from './components/PostList.jsx'
-import { CreatePost } from './components/CreatePost.jsx'
-import { PostFilter } from './components/PostFilter.jsx'
-import { PostSorting } from './components/PostSorting.jsx'
-import { useQuery } from '@tanstack/react-query'
-import { getPosts } from './api/posts.js'
 import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { getPosts } from '../api/posts.js'
+import { Header } from '../components/Header.jsx'
+import { CreatePost } from '../components/CreatePost.jsx'
+import { PostList } from '../components/PostList.jsx'
+import { PostFilter } from '../components/PostFilter.jsx'
+import { PostSorting } from '../components/PostSorting.jsx'
+
 export function Blog() {
   const [author, setAuthor] = useState('')
   const [sortBy, setSortBy] = useState('createdAt')
   const [sortOrder, setSortOrder] = useState('descending')
+
   const postsQuery = useQuery({
     queryKey: ['posts', { author, sortBy, sortOrder }],
     queryFn: () => getPosts({ author, sortBy, sortOrder }),
   })
+
   const posts = postsQuery.data ?? []
+
   return (
     <div style={{ padding: 8 }}>
-      <h1>Welcome to My Blog</h1>
+      <Header />
+      <br />
+      <hr />
+      <h1>Welcome to My Blog!</h1>
       <CreatePost />
       <br />
       <hr />
