@@ -35,22 +35,15 @@ export async function listPostsByTag(tags, options) {
   return await listPosts({ tags }, options)
 }
 
-export async function getPostById(postId) {
-  return await Post.findById(postId).populate('author', 'username')
+export async function getPostById(userId, postId) {
+  return await Post.findOne({ _id: postId, author: userId })
 }
 
-export async function updatePost(
-  userId,
-  postId,
-  title,
-  author,
-  contents,
-  tags,
-) {
+export async function updatePost(userId, postId, updateData) {
   const updated = await Post.findOneAndUpdate(
     { _id: postId, author: userId },
-    { $set: { title, author, contents, tags } },
-    { new: true },
+    { $set: updateData },
+    { new: true, runValidators: true },
   )
   return updated ? await updated.populate('author', 'username') : null
 }
