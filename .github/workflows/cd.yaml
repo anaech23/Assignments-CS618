@@ -1,51 +1,67 @@
 name: Deploy Blog Application
+
 on:
   push:
     branches:
       - main
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     environment:
       name: production
       url: ${{ steps.deploy-frontend.outputs.url }}
+
     steps:
-      - uses: actions/checkout@v3
-      - name: Login to Docker Hub
-        uses: docker/login-action@v2
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - uses: google-github-actions/auth@v1
-        with:
-          service_account: ${{ secrets.GOOGLECLOUD_SERVICE_ACCOUNT }}
           credentials_json: ${{ secrets.GOOGLECLOUD_CREDENTIALS }}
+
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker
+        run: |
+          gcloud auth configure-docker us-east5-docker.pkg.dev --quiet
+
+      # Build and push backend
       - name: Build and push backend image
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
           context: ./backend
           file: ./backend/Dockerfile
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/blog-backend:${{ github.sha }}
+          tags: us-east5-docker.pkg.dev/my-blog-project-514003/frontend-images/blog-backend:${{ github.sha }}
+
+      # Deploy backend
       - id: deploy-backend
         name: Deploy backend
-        uses: google-github-actions/deploy-cloudrun@v1
+        uses: google-github-actions/deploy-cloudrun@v2
         with:
           service: blog-backend
-          image: ${{ secrets.DOCKERHUB_USERNAME }}/blog-backend:${{ github.sha }}
-          region: ${{ secrets.GOOGLECLOUD_REGION }}
+          image: us-east5-docker.pkg.dev/my-blog-project-514003/frontend-images/blog-backend:${{ github.sha }}
+          region: us-east5
+
+      # Build and push frontend
       - name: Build and push frontend image
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/blog-frontend:${{ github.sha }}
-          build-args: VITE_BACKEND_URL=${{ steps.deploy-backend.outputs.url }}/api/v1
+          tags: us-east5-docker.pkg.dev/my-blog-project-514003/frontend-images/blog-frontend:${{ github.sha }}
+          build-args: |
+            VITE_BACKEND_URL=${{ steps.deploy-backend.outputs.url }}/api/v1
+
+      # Deploy frontend
       - id: deploy-frontend
         name: Deploy frontend
-        uses: google-github-actions/deploy-cloudrun@v1
+        uses: google-github-actions/deploy-cloudrun@v2
         with:
           service: blog-frontend
-          image: ${{ secrets.DOCKERHUB_USERNAME }}/blog-frontend:${{ github.sha }}
-          region: ${{ secrets.GOOGLECLOUD_REGION }}
+          image: us-east5-docker.pkg.dev/my-blog-project-514003/frontend-images/blog-frontend:${{ github.sha }}
+          region: us-east5
